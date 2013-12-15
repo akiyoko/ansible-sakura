@@ -1,0 +1,39 @@
+#####
+# Usage:
+#   ansible-playbook -k -c paramiko -i hosts sakura_root.yml -vv
+#
+#   if you want to change default root_password:
+#     1. root_password=$(openssl passwd -salt salty -1 <root new password>)
+#     2. ansible-playbook -k -c paramiko -i hosts sakura_root.yml -vv --extra-vars "root_password=$root_password"
+#####
+- name: setting sakura server by root
+  hosts: sakura_root
+  user: root
+  vars:
+    root_password: $1$salty$SiFJFYDiz6mIfmgfk/hiM1
+    user_name: admin
+    # NOTE: Password must be hashed. this is created with:
+    # openssl passwd -salt salty -1 mypass
+    user_password: $1$salty$WoG5tu8Y63f.rmnpDr9lz0
+    ssh_port: 10022
+
+  tasks:
+    - name: change root password
+      user: name=root password={{ root_password }}
+
+    - name: change SSH port
+      lineinfile: dest=/etc/ssh/sshd_config regexp="^#Port " line="Port {{ ssh_port }}" state=present
+
+    - name: create iptables
+      template: src=iptables.j2 dest=/etc/sysconfig/iptables
+
+    - name: create user
+      user: name={{ user_name }} password={{ user_password }} groups=wheel
+
+    - name: allow wheel users to sudo
+      # NOTE: Because of the ': ' on the line, fully quote or use {{':'}}.
+      lineinfile: dest=/etc/sudoers regexp="^#\s*(%wheel\s+ALL=\(ALL\)\s+NOPASSWD{{':'}}\s+ALL)" line="\1" backrefs=yes state=present
+
+    # NOTE: Combine two tasks to keep ansible access with port 22
+    - name: restart sshd and restart iptables
+      shell: service sshd restart && /etc/init.d/iptables restart
