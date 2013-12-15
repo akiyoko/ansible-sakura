@@ -1,0 +1,62 @@
+#####
+# Usage:
+#   ansible-playbook sakura_lamp.yml -i hosts -vv
+#####
+- name: install LAMP to sakura server
+  hosts: sakura
+  user: admin
+  sudo: yes
+  vars:
+    httpd_port: 80
+    mysql_port: 3306
+
+  tasks:
+    - name: disallow root SSH access
+      lineinfile: dest=/etc/ssh/sshd_config regexp="^#PermitRootLogin " line="PermitRootLogin no" state=present
+      notify: restart sshd
+    - name: disallow password authentication
+      lineinfile: dest=/etc/ssh/sshd_config regexp="^#PasswordAuthentication " line="PasswordAuthentication no" state=present
+      notify: restart sshd
+
+    - name: update yum
+      command: yum -y update
+    #- name: install requirements
+    #  yum: name={{ item }} state=present
+    #  with_items:
+    #    - git
+
+    # repository
+    - name: add repository 'rpmforge-repo'
+      yum: name=http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm state=present
+    - name: add repository 'remi-repo'
+      yum: name=http://rpms.famillecollet.com/enterprise/remi-release-6.rpm state=present
+
+    # Apache
+    - name: install apache
+      yum: name=httpd enablerepo=rpmforge,remi state=present
+    - name: start httpd
+      service: name=httpd state=started enabled=yes
+    # PHP
+    - name: install php
+      yum: name={{ item }} enablerepo=rpmforge,remi state=present
+      with_items:
+        - php
+    # MySQL
+    - name: install mysql
+      #yum: name=mysql-server-5.5.34 enablerepo=rpmforge,remi disablerepo=epel
+      yum: name=mysql-server enablerepo=rpmforge,remi state=present
+
+    # iptables
+    - name: add iptables rule for httpd
+      lineinfile: dest=/etc/sysconfig/iptables regexp="{{ httpd_port }}" line="-A RH-Firewall-1-INPUT -m state --state NEW -m tcp -p tcp --dport {{ httpd_port }} -j ACCEPT" insertbefore="^# add end" state=present
+      notify: restart iptables
+    - name: add iptables rule for mysql
+      lineinfile: dest=/etc/sysconfig/iptables regexp="{{ mysql_port }}" line="-A RH-Firewall-1-INPUT -m state --state NEW -m tcp -p tcp --dport {{ mysql_port }} -j ACCEPT" insertbefore="^# add end" state=present
+      notify: restart iptables
+
+  handlers:
+    - name: restart sshd
+      service: name=sshd state=restarted
+
+    - name: restart iptables
+      service: name=iptables state=restarted
