@@ -5,9 +5,8 @@ Ansible playbook for SakuraServer VPS
 
 
 ##Usage
-$ root_password=$(openssl passwd -salt salty -1 \<root new password\>)  
 $ user_password=$(openssl passwd -salt salty -1 \<user password\>)  
-$ ansible-playbook -k -c paramiko -i hosts sakura_root.yml -vv --extra-vars "root_password=$root_password user_password=$user_password"  
+$ ansible-playbook -k -c paramiko -i hosts sakura_root.yml -vv --extra-vars "user_password=$user_password"  
   
 $ ssh-keygen  
 $ ssh-copy-id -i ~/.ssh/sakura_rsa.pub "-p 10022 admin@\<SakuraServer ip address\>"  
