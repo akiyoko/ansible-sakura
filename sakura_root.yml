@@ -2,14 +2,17 @@
 # Usage:
 #   ansible-playbook -k -c paramiko -i hosts sakura_root.yml -vv
 #
-#   if you want to change default root_password:
+#   if you want to change default password:
 #     1. root_password=$(openssl passwd -salt salty -1 <root new password>)
-#     2. ansible-playbook -k -c paramiko -i hosts sakura_root.yml -vv --extra-vars "root_password=$root_password"
+#     2. user_password=$(openssl passwd -salt salty -1 \<user password\>)
+#     3. ansible-playbook -k -c paramiko -i hosts sakura_root.yml -vv --extra-vars "root_password=$root_password user_password=$user_password"
 #####
-- name: setting sakura server by root
+- name: setting SakuraServer VPS by root
   hosts: sakura_root
   user: root
   vars:
+    # NOTE: Password must be hashed. this is created with:
+    # openssl passwd -salt salty -1 1qazxsw2
     root_password: $1$salty$SiFJFYDiz6mIfmgfk/hiM1
     user_name: admin
     # NOTE: Password must be hashed. this is created with:

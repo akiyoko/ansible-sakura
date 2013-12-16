@@ -2,7 +2,7 @@
 # Usage:
 #   ansible-playbook sakura_lamp.yml -i hosts -vv
 #####
-- name: install LAMP to sakura server
+- name: setting LAMP to SakuraServer VPS
   hosts: sakura
   user: admin
   sudo: yes
@@ -33,23 +33,21 @@
 
     # Apache
     - name: install apache
-      yum: name=httpd enablerepo=rpmforge,remi state=present
+      yum: name=httpd enablerepo=remi,epel,rpmforge state=present
     - name: start httpd
       service: name=httpd state=started enabled=yes
+    - name: add iptables rule for httpd
+      lineinfile: dest=/etc/sysconfig/iptables regexp="{{ httpd_port }}" line="-A RH-Firewall-1-INPUT -m state --state NEW -m tcp -p tcp --dport {{ httpd_port }} -j ACCEPT" insertbefore="^# add end" state=present
+      notify: restart iptables
     # PHP
     - name: install php
-      yum: name={{ item }} enablerepo=rpmforge,remi state=present
+      yum: name={{ item }} enablerepo=remi,epel,rpmforge state=present
       with_items:
         - php
     # MySQL
     - name: install mysql
-      #yum: name=mysql-server-5.5.34 enablerepo=rpmforge,remi disablerepo=epel
-      yum: name=mysql-server enablerepo=rpmforge,remi state=present
-
-    # iptables
-    - name: add iptables rule for httpd
-      lineinfile: dest=/etc/sysconfig/iptables regexp="{{ httpd_port }}" line="-A RH-Firewall-1-INPUT -m state --state NEW -m tcp -p tcp --dport {{ httpd_port }} -j ACCEPT" insertbefore="^# add end" state=present
-      notify: restart iptables
+      #yum: name=mysql-server-5.5.34 enablerepo=remi,rpmforge disablerepo=epel
+      yum: name=mysql-server enablerepo=remi,epel,rpmforge state=present
     - name: add iptables rule for mysql
       lineinfile: dest=/etc/sysconfig/iptables regexp="{{ mysql_port }}" line="-A RH-Firewall-1-INPUT -m state --state NEW -m tcp -p tcp --dport {{ mysql_port }} -j ACCEPT" insertbefore="^# add end" state=present
       notify: restart iptables
